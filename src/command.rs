@@ -1,3 +1,5 @@
+#![allow(unused_variables)]
+
 use std::collections::HashMap;
 use std::str::FromStr;
 
@@ -34,6 +36,7 @@ impl Cmd {
     }
 
     fn handle_set(args: &Option<String>, db: &mut Database) -> CmdOutput {
+        // TODO: Handle errors properly
         let mut tokens = args.as_ref().unwrap().splitn(2, ' ');
         let key = tokens.next().unwrap().to_string();
         let value = tokens.next().unwrap().to_string();
@@ -42,6 +45,7 @@ impl Cmd {
     }
 
     fn handle_get(args: &Option<String>, db: &mut Database) -> CmdOutput {
+        // TODO: Handle errors properly
         let key = args.as_ref().unwrap().trim();
         let value = db.get(key).unwrap().to_string();
         Ok(value)

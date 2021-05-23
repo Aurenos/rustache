@@ -12,6 +12,7 @@ fn main() {
     let listener = TcpListener::bind("127.0.0.1:8888").unwrap();
     let mut database: HashMap<String, String> = HashMap::new();
     println!("Server started. Awaiting connections.");
+    // TODO: make this handle multiple simulataneous connections eventually
     for stream in listener.incoming() {
         let stream = stream.unwrap();
         handle_connection(stream, &mut database);
