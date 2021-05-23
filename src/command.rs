@@ -16,12 +16,12 @@ impl Cmd {
 
         match self {
             Self::Ping => Ok(String::from("PONG")),
-            Self::Echo(ref args) => match args {
+            Self::Echo(args) => match args {
                 Some(string) => Ok(string.to_string()),
                 None => Err("ERROR: Nothing to echo".to_string()),
             },
 
-            Self::Set(ref args) => {
+            Self::Set(args) => {
                 let mut tokens = args.as_ref().unwrap().splitn(2, ' ');
                 let key = tokens.next().unwrap().to_string();
                 let value = tokens.next().unwrap().to_string();
@@ -29,13 +29,13 @@ impl Cmd {
                 Ok(format!("SET \"{}\":\"{}\"", key, value))
             }
 
-            Self::Get(ref args) => {
+            Self::Get(args) => {
                 let key = args.as_ref().unwrap().trim();
                 let value = db.get(key).unwrap().to_string();
                 Ok(value)
             }
 
-            Self::Del(ref args) => Ok("DEL Command Received".to_string()),
+            Self::Del(args) => Ok("DEL Command Received".to_string()),
         }
     }
 }
