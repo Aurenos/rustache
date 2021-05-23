@@ -10,33 +10,41 @@ pub enum Cmd {
     Del(Option<String>),
 }
 
+type Database = HashMap<String, String>;
+type CmdOutput = Result<String, String>;
+
 impl Cmd {
-    pub fn handle(&self, db: &mut HashMap<String, String>) -> Result<String, String> {
-        // use Cmd::*; // You can use this if you want to remove the Self:: prefixing from below
+    pub fn handle(&self, db: &mut Database) -> CmdOutput {
+        use Cmd::*; // let's us use the Cmd invariants without prefixing them with `Self::`
 
         match self {
-            Self::Ping => Ok(String::from("PONG")),
-            Self::Echo(args) => match args {
-                Some(string) => Ok(string.to_string()),
-                None => Err("ERROR: Nothing to echo".to_string()),
-            },
+            Ping => Ok(String::from("PONG")),
+            Echo(args) => Self::handle_echo(args),
+            Set(args) => Self::handle_set(args, db),
+            Get(args) => Self::handle_get(args, db),
 
-            Self::Set(args) => {
-                let mut tokens = args.as_ref().unwrap().splitn(2, ' ');
-                let key = tokens.next().unwrap().to_string();
-                let value = tokens.next().unwrap().to_string();
-                db.insert(key.clone(), value.clone());
-                Ok(format!("SET \"{}\":\"{}\"", key, value))
-            }
-
-            Self::Get(args) => {
-                let key = args.as_ref().unwrap().trim();
-                let value = db.get(key).unwrap().to_string();
-                Ok(value)
-            }
-
-            Self::Del(args) => Ok("DEL Command Received".to_string()),
+            Del(args) => Ok("DEL Command Received".to_string()),
         }
+    }
+
+    fn handle_echo(args: &Option<String>) -> CmdOutput {
+        args.as_ref()
+            .ok_or_else(|| "Nothing to echo".to_string())
+            .map(|s| s.to_string())
+    }
+
+    fn handle_set(args: &Option<String>, db: &mut Database) -> CmdOutput {
+        let mut tokens = args.as_ref().unwrap().splitn(2, ' ');
+        let key = tokens.next().unwrap().to_string();
+        let value = tokens.next().unwrap().to_string();
+        db.insert(key.clone(), value.clone());
+        Ok(format!("SET \"{}\":\"{}\"", key, value))
+    }
+
+    fn handle_get(args: &Option<String>, db: &mut Database) -> CmdOutput {
+        let key = args.as_ref().unwrap().trim();
+        let value = db.get(key).unwrap().to_string();
+        Ok(value)
     }
 }
 
@@ -54,7 +62,26 @@ impl FromStr for Cmd {
             "SET" => Ok(Cmd::Set(args)),
             "GET" => Ok(Cmd::Get(args)),
             "DEL" => Ok(Cmd::Del(args)),
-            _ => Err(command.to_string()),
+            _ => Err(format!("ERROR: Unknown command [{}]", command)),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn str_to_cmd() {
+        assert_eq!(Cmd::from_str("pInG"), Ok(Cmd::Ping));
+
+        assert_eq!(
+            Cmd::from_str("get schwifty"),
+            Ok(Cmd::Get(Some("schwifty".to_string())))
+        );
+
+        assert_eq!(
+            Cmd::from_str("spiarmf slurmp"),
+            Err("ERROR: Unknown command [SPIARMF]".to_string())
+        );
     }
 }

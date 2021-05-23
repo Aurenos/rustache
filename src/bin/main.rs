@@ -23,14 +23,7 @@ fn handle_connection(stream: TcpStream, db: &mut HashMap<String, String>) {
     let input = bufstream.recv();
     println!("Received: {}", input.trim_end());
 
-    let command = Cmd::from_str(input.as_str());
+    let output = Cmd::from_str(input.as_str()).and_then(|cmd| cmd.handle(db));
 
-    let output = match command {
-        Ok(cmd) => cmd.handle(db),
-        Err(invalid_cmd) => Err(format!("ERROR: Unknown command [{}]", invalid_cmd)),
-    };
-
-    let response = output.unwrap_or_else(|s| s);
-
-    bufstream.send_msg(response);
+    bufstream.send_msg(output.unwrap_or_else(|s| s));
 }
