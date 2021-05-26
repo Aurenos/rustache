@@ -24,7 +24,6 @@ impl Cmd {
             Echo(args) => Self::handle_echo(args),
             Set(args) => Self::handle_set(args, db),
             Get(args) => Self::handle_get(args, db),
-
             Del(args) => Ok("DEL Command Received".to_string()),
         }
     }
@@ -36,19 +35,39 @@ impl Cmd {
     }
 
     fn handle_set(args: &Option<String>, db: &mut Database) -> CmdOutput {
-        // TODO: Handle errors properly
-        let mut tokens = args.as_ref().unwrap().splitn(2, ' ');
-        let key = tokens.next().unwrap().to_string();
-        let value = tokens.next().unwrap().to_string();
-        db.insert(key.clone(), value.clone());
-        Ok(format!("SET \"{}\":\"{}\"", key, value))
+        if let Some(args) = args.as_ref() {
+            let mut tokens = args.splitn(2, ' ');
+            let key: String;
+            let value: String;
+
+            if let Some(k) = tokens.next() {
+                key = k.to_string();
+            } else {
+                return Err("ERROR: No key specified".to_string());
+            }
+
+            if let Some(v) = tokens.next() {
+                value = v.to_string()
+            } else {
+                return Err("ERROR: No value specified".to_string());
+            }
+
+            db.insert(key.clone(), value.clone());
+            Ok(format!("SET \"{}\":\"{}\"", key, value))
+        } else {
+            Err("ERROR: Invalid arguments to command SET".to_string())
+        }
     }
 
     fn handle_get(args: &Option<String>, db: &mut Database) -> CmdOutput {
-        // TODO: Handle errors properly
-        let key = args.as_ref().unwrap().trim();
-        let value = db.get(key).unwrap().to_string();
-        Ok(value)
+        if let Some(args) = args.as_ref() {
+            let key = args.trim();
+            db.get(key)
+                .ok_or_else(|| "NONE".to_string())
+                .map(|s| s.to_string())
+        } else {
+            Err("ERROR: No key specified to command GET".to_string())
+        }
     }
 }
 
