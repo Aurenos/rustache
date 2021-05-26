@@ -24,7 +24,7 @@ impl Cmd {
             Echo(args) => Self::handle_echo(args),
             Set(args) => Self::handle_set(args, db),
             Get(args) => Self::handle_get(args, db),
-            Del(args) => Ok("DEL Command Received".to_string()),
+            Del(args) => Self::handle_del(args, db),
         }
     }
 
@@ -67,6 +67,19 @@ impl Cmd {
                 .map(|s| s.to_string())
         } else {
             Err("ERROR: No key specified to command GET".to_string())
+        }
+    }
+
+    fn handle_del(args: &Option<String>, db: &mut Database) -> CmdOutput {
+        if let Some(args) = args.as_ref() {
+            let key = args.trim();
+            if db.remove(key).is_some() {
+                Ok(format!("Key [{}] deleted", key))
+            } else {
+                Err(format!("ERROR: Key [{}] does not exist", key))
+            }
+        } else {
+            Err("ERROR: No key specified to command DEL".to_string())
         }
     }
 }
