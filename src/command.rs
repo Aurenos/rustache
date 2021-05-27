@@ -23,27 +23,6 @@ pub enum CmdError {
     DatabaseError(ErrorMsg),
 }
 
-impl CmdError {
-    fn get_full_msg(&self, name: &'static str, msg: &ErrorMsg) -> String {
-        let mut full_msg = String::from(name);
-        if let Some(m) = msg {
-            full_msg.push_str(format!(": {}", m).as_str())
-        }
-        full_msg
-    }
-}
-
-impl ToString for CmdError {
-    fn to_string(&self) -> String {
-        // TODO: Maybe look up how to do reflection to extract the symbol name
-        match self {
-            Self::UnknownCommandError(msg) => self.get_full_msg("UnknownCommandError", msg),
-            Self::InvalidArgumentError(msg) => self.get_full_msg("InvalidArgumentError", msg),
-            Self::DatabaseError(msg) => self.get_full_msg("DatabaseError", msg),
-        }
-    }
-}
-
 impl Cmd {
     pub fn handle(&self, db: &mut Database) -> CmdOutput {
         use Cmd::*; // let's us use the Cmd invariants without prefixing them with `Self::`
@@ -86,7 +65,7 @@ impl Cmd {
             }
 
             db.insert(key.clone(), value.clone());
-            Ok(format!("SET \"{}\":\"{}\"", key, value))
+            Ok(format!("\"{}\":\"{}\"", key, value))
         } else {
             Err(CmdError::InvalidArgumentError(None))
         }
@@ -109,10 +88,10 @@ impl Cmd {
         if let Some(args) = args.as_ref() {
             let key = args.trim();
             if db.remove(key).is_some() {
-                Ok(format!("Key [{}] deleted", key))
+                Ok(format!("Key \"{}\" deleted", key))
             } else {
                 Err(CmdError::DatabaseError(Some(format!(
-                    "Key [{}] does not exist",
+                    "Key \"{}\" does not exist",
                     key
                 ))))
             }
@@ -139,6 +118,27 @@ impl FromStr for Cmd {
             "GET" => Ok(Cmd::Get(args)),
             "DEL" => Ok(Cmd::Del(args)),
             _ => Err(CmdError::UnknownCommandError(Some(command.to_string()))),
+        }
+    }
+}
+
+impl CmdError {
+    fn get_full_msg(&self, name: &'static str, msg: &ErrorMsg) -> String {
+        let mut full_msg = String::from(name);
+        if let Some(m) = msg {
+            full_msg.push_str(format!(": {}", m).as_str())
+        }
+        full_msg
+    }
+}
+
+impl ToString for CmdError {
+    fn to_string(&self) -> String {
+        // TODO: Maybe look up how to do reflection to extract the symbol name
+        match self {
+            Self::UnknownCommandError(msg) => self.get_full_msg("UnknownCommandError", msg),
+            Self::InvalidArgumentError(msg) => self.get_full_msg("InvalidArgumentError", msg),
+            Self::DatabaseError(msg) => self.get_full_msg("DatabaseError", msg),
         }
     }
 }
