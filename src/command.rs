@@ -3,6 +3,10 @@
 use std::collections::HashMap;
 use std::str::FromStr;
 
+type Database = HashMap<String, String>;
+type CmdOutput = Result<String, CmdError>;
+type ErrorMsg = Option<String>;
+
 #[derive(Debug, PartialEq)]
 pub enum Cmd {
     Ping,
@@ -12,8 +16,33 @@ pub enum Cmd {
     Del(Option<String>),
 }
 
-type Database = HashMap<String, String>;
-type CmdOutput = Result<String, String>;
+#[derive(Debug, PartialEq)]
+pub enum CmdError {
+    UnknownCommandError(ErrorMsg),
+    InvalidArgumentError(ErrorMsg),
+    DatabaseError(ErrorMsg),
+}
+
+impl CmdError {
+    fn get_full_msg(&self, name: &'static str, msg: &ErrorMsg) -> String {
+        let mut full_msg = String::from(name);
+        if let Some(m) = msg {
+            full_msg.push_str(format!(": {}", m).as_str())
+        }
+        full_msg
+    }
+}
+
+impl ToString for CmdError {
+    fn to_string(&self) -> String {
+        // TODO: Maybe look up how to do reflection to extract the symbol name
+        match self {
+            Self::UnknownCommandError(msg) => self.get_full_msg("UnknownCommandError", msg),
+            Self::InvalidArgumentError(msg) => self.get_full_msg("InvalidArgumentError", msg),
+            Self::DatabaseError(msg) => self.get_full_msg("DatabaseError", msg),
+        }
+    }
+}
 
 impl Cmd {
     pub fn handle(&self, db: &mut Database) -> CmdOutput {
@@ -30,7 +59,7 @@ impl Cmd {
 
     fn handle_echo(args: &Option<String>) -> CmdOutput {
         args.as_ref()
-            .ok_or_else(|| "Nothing to echo".to_string())
+            .ok_or_else(|| CmdError::InvalidArgumentError(Some("Nothing to echo".to_string())))
             .map(|s| s.to_string())
     }
 
@@ -43,19 +72,23 @@ impl Cmd {
             if let Some(k) = tokens.next() {
                 key = k.to_string();
             } else {
-                return Err("ERROR: No key specified".to_string());
+                return Err(CmdError::InvalidArgumentError(Some(
+                    "No key specified".to_string(),
+                )));
             }
 
             if let Some(v) = tokens.next() {
                 value = v.to_string()
             } else {
-                return Err("ERROR: No value specified".to_string());
+                return Err(CmdError::InvalidArgumentError(Some(
+                    "No value specified".to_string(),
+                )));
             }
 
             db.insert(key.clone(), value.clone());
             Ok(format!("SET \"{}\":\"{}\"", key, value))
         } else {
-            Err("ERROR: Invalid arguments to command SET".to_string())
+            Err(CmdError::InvalidArgumentError(None))
         }
     }
 
@@ -63,10 +96,12 @@ impl Cmd {
         if let Some(args) = args.as_ref() {
             let key = args.trim();
             db.get(key)
-                .ok_or_else(|| "NONE".to_string())
+                .ok_or_else(|| CmdError::DatabaseError(Some("No value for key".to_string())))
                 .map(|s| s.to_string())
         } else {
-            Err("ERROR: No key specified to command GET".to_string())
+            Err(CmdError::InvalidArgumentError(Some(
+                "No key specified".to_string(),
+            )))
         }
     }
 
@@ -76,16 +111,21 @@ impl Cmd {
             if db.remove(key).is_some() {
                 Ok(format!("Key [{}] deleted", key))
             } else {
-                Err(format!("ERROR: Key [{}] does not exist", key))
+                Err(CmdError::DatabaseError(Some(format!(
+                    "Key [{}] does not exist",
+                    key
+                ))))
             }
         } else {
-            Err("ERROR: No key specified to command DEL".to_string())
+            Err(CmdError::InvalidArgumentError(Some(
+                "No key specified".to_string(),
+            )))
         }
     }
 }
 
 impl FromStr for Cmd {
-    type Err = String;
+    type Err = CmdError;
 
     fn from_str(input: &str) -> Result<Cmd, Self::Err> {
         let mut splitter = input.trim_end().splitn(2, ' ');
@@ -98,7 +138,7 @@ impl FromStr for Cmd {
             "SET" => Ok(Cmd::Set(args)),
             "GET" => Ok(Cmd::Get(args)),
             "DEL" => Ok(Cmd::Del(args)),
-            _ => Err(format!("ERROR: Unknown command [{}]", command)),
+            _ => Err(CmdError::UnknownCommandError(Some(command.to_string()))),
         }
     }
 }

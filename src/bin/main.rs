@@ -26,5 +26,5 @@ fn handle_connection(stream: TcpStream, db: &mut HashMap<String, String>) {
 
     let output = Cmd::from_str(input.as_str()).and_then(|cmd| cmd.handle(db));
 
-    bufstream.send_msg(output.unwrap_or_else(|s| s));
+    bufstream.send_msg(output.unwrap_or_else(|s| s.to_string()));
 }
