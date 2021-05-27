@@ -37,9 +37,11 @@ impl Cmd {
     }
 
     fn handle_echo(args: &Option<String>) -> CmdOutput {
+        let no_echo_err = CmdError::InvalidArgumentError(Some("Nothing to echo".to_string()));
         args.as_ref()
-            .ok_or_else(|| CmdError::InvalidArgumentError(Some("Nothing to echo".to_string())))
-            .map(|s| s.to_string())
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .ok_or(no_echo_err)
     }
 
     fn handle_set(args: &Option<String>, db: &mut Database) -> CmdOutput {
@@ -146,6 +148,7 @@ impl ToString for CmdError {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
     fn str_to_cmd() {
         assert_eq!(Cmd::from_str("pInG"), Ok(Cmd::Ping));
@@ -155,9 +158,40 @@ mod tests {
             Ok(Cmd::Get(Some("schwifty".to_string())))
         );
 
-        assert_eq!(
+        assert!(matches!(
             Cmd::from_str("spiarmf slurmp"),
-            Err("ERROR: Unknown command [SPIARMF]".to_string())
+            Err(CmdError::UnknownCommandError(_))
+        ));
+    }
+
+    #[test]
+    fn handle_echo_cmd() {
+        let mut db = Database::new();
+
+        let cmd = Cmd::Echo(None);
+        assert!(matches!(
+            cmd.handle(&mut db),
+            Err(CmdError::InvalidArgumentError(_))
+        ));
+
+        assert!(matches!(
+            Cmd::Echo(Some("ermahgerd dergs".to_string())).handle(&mut db),
+            Ok(_)
+        ));
+
+        assert!(matches!(
+            Cmd::Echo(Some("".to_string())).handle(&mut db),
+            Err(CmdError::InvalidArgumentError(_))
+        ));
+
+        assert!(matches!(
+            Cmd::Echo(Some("  \n".to_string())).handle(&mut db),
+            Err(CmdError::InvalidArgumentError(_))
+        ));
+
+        assert_eq!(
+            Cmd::Echo(Some("Slurm\r\n".to_string())).handle(&mut db),
+            Ok("Slurm".to_string())
         );
     }
 }
