@@ -78,53 +78,32 @@ impl FromStr for Cmd {
         let cmd_str = splitter.next().unwrap().to_uppercase();
         let args = parse_args(splitter.next().map(|s| s.to_string()));
 
-        let cmd = match cmd_str.as_str() {
-            "PING" => Cmd::Ping,
-            "ECHO" => {
-                if args.is_empty() {
-                    return Err(InvalidArgumentError(Some("Nothing to echo".to_string())));
-                } else {
-                    Cmd::Echo {
-                        output: args.join(" "),
-                    }
-                }
-            }
-            "SET" => {
-                if args.is_empty() {
-                    return Err(InvalidArgumentError(Some("No key specified".to_string())));
-                } else if args.len() < 2 {
-                    return Err(InvalidArgumentError(Some("No value specified".to_string())));
-                } else {
-                    Cmd::Set {
-                        key: args[0].clone(),
-                        value: args[1].clone(),
-                    }
-                }
-            }
-            "GET" => {
-                if args.is_empty() {
-                    return Err(InvalidArgumentError(Some("No key specified".to_string())));
-                } else {
-                    Cmd::Get {
-                        key: args[0].clone(),
-                    }
-                }
-            }
-            "DEL" => {
-                if args.is_empty() {
-                    return Err(InvalidArgumentError(Some("No key specified".to_string())));
-                } else {
-                    Cmd::Del {
-                        key: args[0].clone(),
-                    }
-                }
-            }
-            _ => {
-                return Err(CmdError::UnknownCommandError(Some(cmd_str.to_string())));
-            }
-        };
-
-        Ok(cmd)
+        match cmd_str.as_str() {
+            "PING" => Ok(Cmd::Ping),
+            "ECHO" => match &args[..] {
+                [_, ..] => Ok(Cmd::Echo {
+                    output: args.join(" "),
+                }),
+                _ => Err(InvalidArgumentError(Some("Nothing to echo".to_string()))),
+            },
+            "SET" => match &args[..] {
+                [_] => Err(InvalidArgumentError(Some("No key specified".to_string()))),
+                [k, _, ..] => Ok(Cmd::Set {
+                    key: k.to_string(),
+                    value: args[1..].join(" "),
+                }),
+                _ => Err(InvalidArgumentError(Some("No key specified".to_string()))),
+            },
+            "GET" => match &args[..] {
+                [k, ..] => Ok(Cmd::Get { key: k.to_string() }),
+                _ => Err(InvalidArgumentError(Some("No key specified".to_string()))),
+            },
+            "DEL" => match &args[..] {
+                [k, ..] => Ok(Cmd::Del { key: k.to_string() }),
+                _ => Err(InvalidArgumentError(Some("No key specified".to_string()))),
+            },
+            _ => Err(CmdError::UnknownCommandError(Some(cmd_str.to_string()))),
+        }
     }
 }
 
