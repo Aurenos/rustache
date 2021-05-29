@@ -7,7 +7,7 @@ msg = ""
 if len(sys.argv) > 1:
     msg = " ".join(sys.argv[1:])
 
-msg += "\r\n"
+msg += "\n"
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 sock.connect(("localhost", 8888))
