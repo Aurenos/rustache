@@ -131,22 +131,24 @@ impl ToString for CmdError {
 
 #[cfg(test)]
 mod tests {
-    // use super::*;
+    use super::*;
 
-    // #[test]
-    // fn str_to_cmd() {
-    //     assert_eq!(Cmd::from_str("pInG"), Ok(Cmd::Ping));
+    #[test]
+    fn str_to_cmd() {
+        assert_eq!(Cmd::from_str("pInG"), Ok(Cmd::Ping));
 
-    //     assert_eq!(
-    //         Cmd::from_str("get schwifty"),
-    //         Ok(Cmd::Get(Some("schwifty".to_string())))
-    //     );
+        assert_eq!(
+            Cmd::from_str("get schwifty"),
+            Ok(Cmd::Get {
+                key: "get schwifty".to_string()
+            })
+        );
 
-    //     assert!(matches!(
-    //         Cmd::from_str("spiarmf slurmp"),
-    //         Err(CmdError::UnknownCommandError(_))
-    //     ));
-    // }
+        assert!(matches!(
+            Cmd::from_str("spiarmf slurmp"),
+            Err(CmdError::UnknownCommandError(_))
+        ));
+    }
 
     // #[test]
     // fn handle_echo_cmd() {
